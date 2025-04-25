@@ -1,0 +1,32 @@
+name: PokéCard Restock Monitor
+
+on:
+  schedule:
+    - cron:  '*/15 * * * *'   # every 15 minutes
+  workflow_dispatch: {}       # manual trigger
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - name: Install deps
+        run: pip install -r requirements.txt
+      - name: Run checker
+        run: python check_collection.py
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          COLLECTION_URLS:  ${{ secrets.COLLECTION_URLS }}
+      - name: Commit state
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add state.json
+          git diff --quiet || (git commit -m "chore: update state" && git push)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
